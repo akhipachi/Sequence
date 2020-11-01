@@ -11,11 +11,10 @@ app = FastAPI()
 async def join(request: Request):
     ip = request.client.host
     game = Game()
-    print(game.players)
     if game.started:
         return {'error': 'Game already started'}
-    id,port = game.join(ip)
-    return {'id': id,'port':port}
+    id, port = game.join(ip)
+    return {'id': id, 'port': port}
 
 
 @app.get('/join/start')

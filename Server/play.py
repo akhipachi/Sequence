@@ -1,16 +1,19 @@
 from time import sleep
 import random
 
+
 class Singleton(type):
-    _instances={}
-    def __call__(cls,*args,**kwargs):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
 
     def reset(cls):
-        cls._instances={} 
+        cls._instances = {}
+
 
 class Message:
     def __init__(self, id, ip, msg):
@@ -20,8 +23,8 @@ class Message:
 
 
 class Play(metaclass=Singleton):
-    def __init__(self, read, write, game, dealer,queue):
-        self.queue=queue
+    def __init__(self, read, write, game, dealer, queue):
+        self.queue = queue
         self.read = read
         self.write = write
         self.game = game
@@ -31,7 +34,8 @@ class Play(metaclass=Singleton):
         self.run()
 
     def message(self, id, msg):
-        self.write.put(Message(id, self.game.players[id].ip_address, msg+'+'+str(id)))
+        self.write.put(
+            Message(id, self.game.players[id].ip_address, msg+'+'+str(id)))
 
     def run(self):
         next = True
@@ -54,8 +58,8 @@ class Play(metaclass=Singleton):
                 if 'jocker' in receive.msg:
                     self.message(receive.id, 'jocker:'+self.dealer.jocker)
                 if 'won' in receive.msg:
+                    print('won')
                     for player in self.game.players:
-                        if player.id!=receive.id:
+                        if player.id != receive.id:
                             self.message(player.id, 'won:'+str(receive.id))
-        Play.reset()
         return

@@ -273,7 +273,6 @@ class Solitaire(App):
                         if len(cards) == 4:
                             set_4 = True
         if sets == 4 and set_4 and self.game.natural_set and self.game.turn or jockers >= 2:
-        # if True:
             self.game.won = True
             self.game.winner=self.id
             self.backend.write.put('won')
