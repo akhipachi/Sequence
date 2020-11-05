@@ -232,7 +232,6 @@ class Solitaire(App):
         self.game.natural_set = False
         set_4 = False
         sets = 0
-        jockers = 0
         for pile in self.game.piles['foundation']:
             if len(pile.widgets) > 1:
                 cards = pile.widgets[1].images
@@ -262,11 +261,12 @@ class Solitaire(App):
                             else:
                                 sequence = False
 
-                    if same_value and not same_suit:
+                    if same_value and not same_suit and len(set(suits))==len(suits):
+                        jockers-=len(cards)-len(values)
                         sets += 1
                         if len(cards) == 4:
                             set_4 = True
-                    if same_suit and sequence and not same_value and len(values)+jockers >= 3:
+                    if same_suit and sequence and not same_value:
                         sets += 1
                         if self.game.jocker_rank not in values:
                             self.game.natural_set = True
