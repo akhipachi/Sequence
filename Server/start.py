@@ -1,5 +1,5 @@
 import random
-import exceptions
+from exceptions import InvalidPlayer, NotEnoughPlayer, DeckEmpty
 from sockets import Connection
 import multiprocessing
 
@@ -35,10 +35,10 @@ class Game(metaclass=Singleton):
 
     def start(self, ip):
         if ip not in self.player_ip:
-            return 'Invalid player'
+            raise InvalidPlayer()
         if(self.started):
             return self.player_ip[ip]
-        if len(self.players) > 0:
+        if len(self.players) > 1:
             self.started = True
             player = self.player_ip[ip]
             for p in self.players:
@@ -50,7 +50,7 @@ class Game(metaclass=Singleton):
             # p.join()
             return player
         else:
-            return 'not enough players'
+            raise NotEnoughPlayer()
 
     def end(self):
         self.queue.put('end')
@@ -74,8 +74,9 @@ class Player:
 class Dealer(metaclass=Singleton):
     def __init__(self):
         self.deck = Deck()
-        self.deck.shufle()
+        self.deck.shuffle()
         self.jocker = self.deck.get_jocker()
+        self.open_deck = []
 
     def deal(self, player: Player):
         if(len(player.cards) == 0):
@@ -86,7 +87,8 @@ class Dealer(metaclass=Singleton):
         try:
             card = self.deck.get()
         except:
-            self.deck.add_deck()
+            self.deck.shuffle(open_deck=self.open_deck)
+            self.open_deck = []
             card = self.deck.get()
         return card
 
@@ -112,14 +114,16 @@ class Deck(metaclass=Singleton):
         for i in range(num_players//2+num_players % 2):
             self.deck += Cards().cards.copy()
 
-    def shufle(self):
+    def shuffle(self, open_deck=None):
+        if open_deck is not None:
+            self.deck = open_deck
         random.shuffle(self.deck)
 
     def get(self):
         if(len(self.deck) >= 1):
             return self.deck.pop()
         else:
-            raise exceptions.DeckEmpty()
+            raise DeckEmpty()
 
     def get_jocker(self):
         if self.jocker is None:

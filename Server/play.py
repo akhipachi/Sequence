@@ -40,6 +40,7 @@ class Play(metaclass=Singleton):
     def run(self):
         next = True
         top = self.dealer.hit()
+        self.dealer.open_deck.append(top)
         while(self.queue.empty()):
             # break
             if next:
@@ -52,9 +53,13 @@ class Play(metaclass=Singleton):
                     self.turn = self.turn+1
                     if self.turn == len(self.game.players):
                         self.turn = 0
+                    self.dealer.open_deck.pop()
+                    self.dealer.open_deck.append(top)
                     self.message(self.turn, 'play:'+top)
                 if 'get' in receive.msg:
-                    self.message(self.turn, 'card:'+self.dealer.hit())
+                    card = self.dealer.hit()
+                    self.dealer.open_deck.append(card)
+                    self.message(self.turn, 'card:'+card)
                 if 'jocker' in receive.msg:
                     self.message(receive.id, 'jocker:'+self.dealer.jocker)
                 if 'won' in receive.msg:
