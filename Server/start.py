@@ -1,7 +1,8 @@
-import random
-from exceptions import InvalidPlayer, NotEnoughPlayer, DeckEmpty
-from sockets import Connection
 import multiprocessing
+import random
+
+from exceptions import DeckEmpty, InvalidPlayer, NotEnoughPlayer
+from sockets import Connection
 
 
 class Singleton(type):
@@ -36,7 +37,7 @@ class Game(metaclass=Singleton):
     def start(self, ip):
         if ip not in self.player_ip:
             raise InvalidPlayer()
-        if(self.started):
+        if self.started:
             return self.player_ip[ip]
         if len(self.players) > 1:
             self.started = True
@@ -45,7 +46,8 @@ class Game(metaclass=Singleton):
                 Dealer().deal(p)
             self.queue = multiprocessing.Queue()
             self.p = multiprocessing.Process(
-                target=Connection, args=(Game(), Dealer(), self.queue))
+                target=Connection, args=(Game(), Dealer(), self.queue)
+            )
             self.p.start()
             # p.join()
             return player
@@ -53,7 +55,7 @@ class Game(metaclass=Singleton):
             raise NotEnoughPlayer()
 
     def end(self):
-        self.queue.put('end')
+        self.queue.put("end")
         self.p.terminate()
         self.started = False
         Game.reset()
@@ -79,7 +81,7 @@ class Dealer(metaclass=Singleton):
         self.open_deck = []
 
     def deal(self, player: Player):
-        if(len(player.cards) == 0):
+        if len(player.cards) == 0:
             for i in range(13):
                 player.cards.append(self.deck.get())
 
@@ -96,13 +98,12 @@ class Dealer(metaclass=Singleton):
 class Cards(metaclass=Singleton):
     def __init__(self):
         self.cards = []
-        CARD_VALUES = ["A", "2", "3", "4", "5",
-                       "6", "7", "8", "9", "10", "J", "Q", "K"]
+        CARD_VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
         CARD_SUITS = ["Clubs", "Hearts", "Spades", "Diamonds"]
         for card_num in CARD_VALUES:
             for card_suit in CARD_SUITS:
                 # str_card = str(card_num) if card_num > 9 else str(card_num)
-                self.cards.append(card_num + ' ' + card_suit)
+                self.cards.append(card_num + " " + card_suit)
 
 
 class Deck(metaclass=Singleton):
@@ -111,7 +112,7 @@ class Deck(metaclass=Singleton):
         self.jocker = None
         num_players = len(Game().players)
         # print(num_players)
-        for i in range(num_players//2+num_players % 2):
+        for i in range(num_players // 2 + num_players % 2):
             self.deck += Cards().cards.copy()
 
     def shuffle(self, open_deck=None):
@@ -120,14 +121,14 @@ class Deck(metaclass=Singleton):
         random.shuffle(self.deck)
 
     def get(self):
-        if(len(self.deck) >= 1):
+        if len(self.deck) >= 1:
             return self.deck.pop()
         else:
             raise DeckEmpty()
 
     def get_jocker(self):
         if self.jocker is None:
-            self.jocker = self.deck.pop(random.randint(0, len(self.deck)-1))
+            self.jocker = self.deck.pop(random.randint(0, len(self.deck) - 1))
         return self.jocker
 
     def add_cards(self):

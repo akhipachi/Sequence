@@ -1,26 +1,20 @@
 ## simpie solitaire card game
-from client import Backend, Client
-from menu import SmartStartMenu
-from games import Sequence
-from game import BaseGame
-from cards import Deck
-from kivy.utils import platform
-from kivy.metrics import Metrics
-from kivy.uix.popup import Popup
-from kivy.uix.label import Label
-from kivy.core.window import Window
-from kivy.properties import NumericProperty, ObjectProperty
-from kivy.uix.widget import Widget
-from kivy.logger import Logger
-from kivy.clock import Clock
-from kivy.app import App
-from kivy.core.audio import SoundLoader
-from kivy.graphics import Color
-
 from functools import partial
 
-import kivy
-
+from cards import Deck
+from client import Backend
+from exceptions import ErrorResponse
+from games import Sequence
+from kivy.app import App
+from kivy.clock import Clock
+from kivy.core.audio import SoundLoader
+from kivy.core.window import Window
+from kivy.logger import Logger
+from kivy.properties import NumericProperty, ObjectProperty
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from kivy.utils import platform
+from menu import SmartStartMenu
 
 # main app
 
@@ -28,27 +22,56 @@ import kivy
 class Solitaire(App):
     game = ObjectProperty(None)
     font_size = NumericProperty(12)
-    menu_height = NumericProperty(0.06*Window.height)
-    pad_by = NumericProperty(0.007*Window.height)
-
+    menu_height = NumericProperty(0.06 * Window.height)
+    pad_by = NumericProperty(0.007 * Window.height)
 
     # initialise config file
     def build_config(self, config):
-        config.setdefaults('piles', {})
-        config.setdefaults('settings', {'fps': 10, 'font_size': 16, 'help_font_size': 14,
-                                        'popup_width': 0.4, 'popup_height': 0.6})
+        config.setdefaults("piles", {})
         config.setdefaults(
-            'game', {'name': 'Sequence', 'won': False, 'deck': []})
-        config.setdefaults('Sequence', {'played': 0, 'won': 0})
-        config.setdefaults('piles', {'tableau0': [], 'tableau1': [], 'tableau2': [], 'tableau3': [], 'tableau4': [],
-                                     'tableau5': [], 'tableau6': [], 'tableau7': [], 'tableau8': [], 'tableau9': [], 'tableau10': [], 'tableau12': [],
-                                     'foundation0': [], 'foundation1': [], 'foundation2': [], 'foundation3': [],
-                                     'waste0': [], 'waste1': [], 'jocker0': []})
+            "settings",
+            {
+                "fps": 10,
+                "font_size": 16,
+                "help_font_size": 14,
+                "popup_width": 0.4,
+                "popup_height": 0.6,
+            },
+        )
+        config.setdefaults("game", {"name": "Sequence", "won": False, "deck": []})
+        config.setdefaults("Sequence", {"played": 0, "won": 0})
+        config.setdefaults(
+            "piles",
+            {
+                "tableau0": [],
+                "tableau1": [],
+                "tableau2": [],
+                "tableau3": [],
+                "tableau4": [],
+                "tableau5": [],
+                "tableau6": [],
+                "tableau7": [],
+                "tableau8": [],
+                "tableau9": [],
+                "tableau10": [],
+                "tableau12": [],
+                "foundation0": [],
+                "foundation1": [],
+                "foundation2": [],
+                "foundation3": [],
+                "waste0": [],
+                "waste1": [],
+                "jocker0": [],
+            },
+        )
         config.write()
 
     # settings panel
     def build_settings(self, settings):
-        settings.add_json_panel('Solitaire', self.config, data='''[
+        settings.add_json_panel(
+            "Solitaire",
+            self.config,
+            data="""[
             { "type": "numeric", "title": "FPS",
               "desc": "animation frames per second",
               "section": "settings", "key": "fps" },
@@ -64,45 +87,46 @@ class Solitaire(App):
             { "type": "numeric", "title": "Popup height",
               "desc": "height of popup as fraction of screen",
               "section": "settings", "key": "popup_height" }
-        ]''')
+        ]""",
+        )
 
     # user updated config
     def on_config_change(self, config, section, key, value):
-        if config is self.config and section == 'settings' and key == 'font_size':
+        if config is self.config and section == "settings" and key == "font_size":
             self.font_size = int(value)
 
     # initialise new game
     def set_game(self, name):
         self.game = Sequence(
-            root=self.root, on_move=self.on_move, menu_size=self.menu_height)
+            root=self.root, on_move=self.on_move, menu_size=self.menu_height
+        )
         self.game.build()
         conf = self.config
         if not conf.has_section(name):
             conf.add_section(name)
-            conf.set(name, 'played', 1)
-            conf.set(name, 'won', 0)
+            conf.set(name, "played", 1)
+            conf.set(name, "won", 0)
         conf.write()
 
     # shuffle the deck
     def shuffle(self, cards):
         self.deck = Deck(cards)
         self.deck.rewind()
-        self.config.set('game', 'won', False)
-        self.config.set(self.game.name, 'played', self.getval('played')+1)
+        self.config.set("game", "won", False)
+        self.config.set(self.game.name, "played", self.getval("played") + 1)
         self.config.write()
 
     # initialise the board
     def build(self):
         self.started = False
-        self.icon = 'icon.png'
+        self.icon = "icon.png"
         conf = self.config
-        name = conf.get('game', 'name')
-        self.font_size = conf.getint('settings', 'font_size')
-        Logger.info("Cards: build game %s font size %d" %
-                    (name, self.font_size))
+        name = conf.get("game", "name")
+        self.font_size = conf.getint("settings", "font_size")
+        Logger.info("Cards: build game %s font size %d" % (name, self.font_size))
         self.set_game(name)
         self._starting = False
-        if conf.has_option('game', 'deck'):
+        if conf.has_option("game", "deck"):
             # restore where we left off
             self.deck = Deck(self.game.decks, config=conf)
             for pile in self.game.all_piles():
@@ -112,16 +136,19 @@ class Solitaire(App):
             self.shuffle()
             for pile in self.game.all_piles():
                 self.game.start(pile, self.deck)
-        if platform == 'android':
-            from android.permissions import request_permissions, Permission
+        if platform == "android":
+            from android.permissions import Permission, request_permissions
+
             request_permissions(
-                [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE])
+                [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE]
+            )
             Window.bind(on_keyboard=self.hook_keyboard)
         Window.on_resize = self.resize
         delay = self.framerate()
         Logger.info("Cards: resize delay = %g", delay)
         self.resize_event = Clock.create_trigger(
-            lambda dt: self.game.do_resize(), delay)
+            lambda dt: self.game.do_resize(), delay
+        )
         self.id = None
         self.backend = None
         self.start_menu()
@@ -131,21 +158,38 @@ class Solitaire(App):
         sm.buildUp()
 
         def check_button(obj):
-            if sm.buttonText == 'Join':
+            if sm.buttonText == "Join":
                 self.backend = Backend.get_instance()
-                self.backend.host = 'http://'+sm.txt.text
+                self.backend.host = "http://" + sm.txt.text
                 try:
                     self.id = self.backend.join()
-                except:
-                    popup = Popup(title='Error', content=Label(
-                        text='Invalid IP Address'), size_hint=(None, None), size=(200, 100))
-                    popup.open()
-            if sm.buttonText == 'Start' and self.id is not None:
+                except Exception as e:
+                    if isinstance(e, ErrorResponse):
+                        text = str(e)
+                    else:
+                        text = "Invalid IP Address"
+                    self.error_popup(text)
+            if sm.buttonText == "Start" and self.id is not None:
                 self.root.remove_widget(sm)
-                self.new_game()
+                try:
+                    self.new_game()
+                except Exception as e:
+                    self.start_menu()
+                    self.error_popup(str(e))
 
         sm.bind(on_button_release=check_button)
         self.root.add_widget(sm)
+
+    def error_popup(self, text):
+        width = self.config.getfloat("settings", "popup_width") * Window.width / 2
+        height = self.config.getfloat("settings", "popup_height") * Window.height / 3
+        popup = Popup(
+            title="Error",
+            content=Label(text=text),
+            size_hint=(None, None),
+            size=(width, height),
+        )
+        popup.open()
 
     # bind android back key
     def hook_keyboard(self, window, key, *args):
@@ -164,59 +208,60 @@ class Solitaire(App):
     def start(self, index, *args):
         if index == 0:
             self._starting = True
-        pile = (self.game.tableau()+self.game.waste() +
-                self.game.jocker())[index]
+        pile = (self.game.tableau() + self.game.waste() + self.game.jocker())[index]
         self.game.start(pile, self.deck)
-        if index+1 < self.game.num_tableau + self.game.num_waste + self.game.num_jocker:
-            Clock.schedule_once(partial(self.start, index+1), self.framerate())
+        if (
+            index + 1
+            < self.game.num_tableau + self.game.num_waste + self.game.num_jocker
+        ):
+            Clock.schedule_once(partial(self.start, index + 1), self.framerate())
         else:
             self._starting = False
 
     def play_sound(self):
-        self.sound = SoundLoader.load('play.wav')
+        self.sound = SoundLoader.load("play.wav")
         self.sound.play()
 
     def control(self, dt):
         if self.backend.read.queue:
             # If revieved any msg
             msg = self.backend.read.get()
-            if 'play' in msg or 'card' in msg:
+            if "play" in msg or "card" in msg:
                 # Putting the recieved card into the deck
-                i = msg.split(':')[1]
-                if self.game.piles['waste'][1].size() != 0:
-                    self.game.piles['waste'][1].remove_cards()
-                self.game.add_to_pile(i, 'waste', 1)
+                i = msg.split(":")[1]
+                if self.game.piles["waste"][1].size() != 0:
+                    self.game.piles["waste"][1].remove_cards()
+                self.game.add_to_pile(i, "waste", 1)
                 self.game.turn = True
-                if 'play' in msg:
+                if "play" in msg:
                     self.play_sound()
-                
-            if 'jocker' in msg:
-                i = msg.split(':')[1]
-                self.game.piles['jocker'][0].clear(1)
-                self.game.add_to_pile(i, 'jocker', 0)
-                rank = i.split(' ')[0]
-                numbers = {'A': 1, 'J': 11, 'Q': 12, 'K': 13}
+
+            if "jocker" in msg:
+                i = msg.split(":")[1]
+                self.game.piles["jocker"][0].clear(1)
+                self.game.add_to_pile(i, "jocker", 0)
+                rank = i.split(" ")[0]
+                numbers = {"A": 1, "J": 11, "Q": 12, "K": 13}
                 if rank in numbers:
                     self.game.jocker_rank = numbers[rank]
                 else:
                     self.game.jocker_rank = int(rank)
-            if 'won' in msg:
-                i = msg.split(':')[1]
-                self.game.won=True
+            if "won" in msg:
+                i = msg.split(":")[1]
+                self.game.won = True
                 self.game.winner = int(i)
                 self.check_score()
 
     def skip(self):
         if not self.started:
             return
-        if self.game.piles['waste'][1].size() != 0 and self.game.turn:
-            top = self.game.piles['waste'][1].widgets[-1]
+        if self.game.piles["waste"][1].size() != 0 and self.game.turn:
+            top = self.game.piles["waste"][1].widgets[-1]
             rank = top.images[0].card.rank
             suit = top.images[0].card.suit
-            suits = {'c': "Clubs", 'h': "Hearts",
-                     's': "Spades", 'd': "Diamonds"}
+            suits = {"c": "Clubs", "h": "Hearts", "s": "Spades", "d": "Diamonds"}
             suit = suits[suit]
-            self.backend.write.put('done:'+str(rank)+' '+suit)
+            self.backend.write.put("done:" + str(rank) + " " + suit)
             self.game.turn = False
             self.game.cards = 0
 
@@ -232,7 +277,7 @@ class Solitaire(App):
         self.game.natural_set = False
         set_4 = False
         sets = 0
-        for pile in self.game.piles['foundation']:
+        for pile in self.game.piles["foundation"]:
             if len(pile.widgets) > 1:
                 cards = pile.widgets[1].images
                 if len(cards) >= 3 and len(cards) <= 4:
@@ -251,18 +296,18 @@ class Solitaire(App):
                         suits.append(card.card.suit)
                     values.sort()
                     for i in range(1, len(values)):
-                        if not values[i] == values[i-1]:
+                        if not values[i] == values[i - 1]:
                             same_value = False
-                        if not suits[i] == suits[i-1]:
+                        if not suits[i] == suits[i - 1]:
                             same_suit = False
-                        if not values[i] == values[i-1]+1:
-                            if values[i] >= values[i-1]+jockers:
+                        if not values[i] == values[i - 1] + 1:
+                            if values[i] >= values[i - 1] + jockers:
                                 jockers -= 1
                             else:
                                 sequence = False
 
-                    if same_value and not same_suit and len(set(suits))==len(suits):
-                        jockers-=len(cards)-len(values)
+                    if same_value and not same_suit and len(set(suits)) == len(suits):
+                        jockers -= len(cards) - len(values)
                         sets += 1
                         if len(cards) == 4:
                             set_4 = True
@@ -272,15 +317,20 @@ class Solitaire(App):
                             self.game.natural_set = True
                         if len(cards) == 4:
                             set_4 = True
-        if sets == 4 and set_4 and self.game.natural_set and self.game.turn or jockers >= 2:
+        if (
+            sets == 4
+            and set_4
+            and self.game.natural_set
+            and self.game.turn
+            or jockers >= 2
+        ):
             self.game.won = True
-            self.game.winner=self.id
-            self.backend.write.put('won')
+            self.game.winner = self.id
+            self.backend.write.put("won")
             self.check_score()
             return True
         else:
             return False
-        
 
     def jocker(self):
         # should change this to not
@@ -289,7 +339,7 @@ class Solitaire(App):
         if self.game.jocker_rank is None:
             self.validate()
             if self.game.natural_set:
-                self.backend.write.put('jocker')
+                self.backend.write.put("jocker")
 
     # app button callbacks
     def new_game(self):
@@ -301,32 +351,32 @@ class Solitaire(App):
         self.start(0)
         self.backend.communication()
         self.started = True
+        self.schedule = Clock.schedule_interval(self.control, 0.5)
 
-        self.schedule=Clock.schedule_interval(self.control, 0.5)
-
-    def stats(self, title=''):
+    def stats(self, title=""):
         if not title:
-            title = '%s statistics' % self.game.name
+            title = "%s statistics" % self.game.name
         data = [
-            'played', self.getval('played', 'str'),
-            'won', self.getval('won', 'str'),
+            "played",
+            self.getval("played", "str"),
+            "won",
+            self.getval("won", "str"),
         ]
         self.popup = self.new_popup(title, (0.4, 0.1), data, self.font_size)
         self.popup.open()
 
     def new_popup(self, title, col_width, data, font_size):
-        width = self.config.getfloat('settings', 'popup_width')*Window.width
-        height = self.config.getfloat('settings', 'popup_height')*Window.height
+        width = self.config.getfloat("settings", "popup_width") * Window.width
+        height = self.config.getfloat("settings", "popup_height") * Window.height
         popup = AppPopup(title=title, size=(width, height))
         columns = len(col_width)
         popup.body.cols = columns
         fsize = str(font_size) + "sp"
         for i, el in enumerate(data):
-            w = width*col_width[i % columns]
-            popup.body.add_widget(
-                Label(text=el, text_size=(w, None), font_size=fsize))
+            w = width * col_width[i % columns]
+            popup.body.add_widget(Label(text=el, text_size=(w, None), font_size=fsize))
         return popup
-    
+
     def dismiss(self):
         Clock.unschedule(self.schedule)
         self.backend.end()
@@ -334,27 +384,25 @@ class Solitaire(App):
         self.build()
         self.popup.dismiss()
 
-
     # update stats and show popup on completed game
     def check_score(self):
         conf = self.config
-        if self.game.won :
+        if self.game.won:
             if self.game.winner == self.id:
                 name = self.game.name
-                won = self.getval('won')
-                conf.set(name, 'won', won+1)
+                won = self.getval("won")
+                conf.set(name, "won", won + 1)
                 conf.write()
-                self.stats(title='Congratulations! - you won :)')
+                self.stats(title="Congratulations! - you won :)")
                 return True
             else:
-                self.stats(title='Oh no! - player ' +
-                           str(self.game.winner)+' won :(')
+                self.stats(title="Oh no! - player " + str(self.game.winner) + " won :(")
 
     # get value from config file
-    def getval(self, key, typ='int'):
-        if typ == 'int':
+    def getval(self, key, typ="int"):
+        if typ == "int":
             val = self.config.getint(self.game.name, key)
-        elif typ == 'float':
+        elif typ == "float":
             val = self.config.getfloat(self.game.name, key)
         else:
             val = self.config.get(self.game.name, key)
@@ -363,17 +411,16 @@ class Solitaire(App):
     # logs the history and, if callback is set then defer drawing to animate
     def on_move(self, orig, dest, num, **args):
         do_callback = False
-        if 'callback' in args:
-            do_callback = args['callback'] is not False
-            callback = args['callback']
-            del args['callback']
-        args['src'] = orig.pid()
-        args['dst'] = dest.pid()
-        args['n'] = num
+        if "callback" in args:
+            do_callback = args["callback"] is not False
+            callback = args["callback"]
+            del args["callback"]
+        args["src"] = orig.pid()
+        args["dst"] = dest.pid()
+        args["n"] = num
         # do it
         if do_callback:
-            Clock.schedule_once(
-                partial(self.draw, args, callback), self.framerate())
+            Clock.schedule_once(partial(self.draw, args, callback), self.framerate())
         else:
             self.do_move(args)
 
@@ -399,7 +446,8 @@ class Solitaire(App):
         pass
 
     def framerate(self):
-        return 1.0 / self.config.getfloat('settings', 'fps')
+        return 1.0 / self.config.getfloat("settings", "fps")
+
 
 # defined in kv file
 
@@ -408,7 +456,7 @@ class AppPopup(Popup):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         Solitaire().run()
     finally:

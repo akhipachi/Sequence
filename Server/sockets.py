@@ -1,11 +1,9 @@
 import socket
-from time import sleep
-from threading import Thread
-from queue import Queue
-from play import Play, Message
-import multiprocessing
-import requests
 import sys
+from queue import Queue
+from threading import Thread
+
+from play import Message, Play
 
 
 class Singleton(type):
@@ -32,7 +30,7 @@ class Communicate(Thread):
         self.port = port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.s.bind(('', port))
+        self.s.bind(("", port))
         self.s.listen(2)
         print(self.port)
 
@@ -41,13 +39,13 @@ class Communicate(Thread):
         print(addr)
         # file=open(str(self.port)+'.txt','w')
         try:
-            while(self.queue.empty()):
+            while self.queue.empty():
                 if not self.write.empty():
                     if self.write.queue[0].id == self.id:
-                        msg = self.write.get().msg+'/'
+                        msg = self.write.get().msg + "/"
                         c.send(msg.encode())
                         received = c.recv(1024).decode()
-                        msg = received.strip('/')
+                        msg = received.strip("/")
                         self.read.put(Message(self.id, addr[0], msg))
             # file.close()
         except Exception as e:
@@ -58,7 +56,6 @@ class Communicate(Thread):
 
 
 class Connection(metaclass=Singleton):
-
     def __init__(self, game, dealer, queue):
         self.queue = queue
         self.read = Queue()
@@ -73,13 +70,14 @@ class Connection(metaclass=Singleton):
         for player in self.game.players:
             # workers.append (Communicate(self.read, self.write, self.game,self.game.players[i].port))
             # workers[i].start()
-            conn = (Communicate(self.read, self.write,
-                                player.id, player.port, self.queue))
+            conn = Communicate(
+                self.read, self.write, player.id, player.port, self.queue
+            )
             sockets.append(conn)
             conn.start()
         Play(self.read, self.write, self.game, self.dealer, self.queue)
         Play.reset()
-        print('exit')
+        print("exit")
         sys.exit()
         # requests.get('http://localhost:8000/join/end')
 

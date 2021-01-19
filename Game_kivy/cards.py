@@ -1,14 +1,14 @@
-import random
 import ast
+import random
 
 # card object - has rank (1-13) and suit (c,d,h,s)
 
 
 class Card(object):
-    aspect_ratio = 314.0/226.0
+    aspect_ratio = 314.0 / 226.0
 
     def __init__(self, rank, suit, faceup=False):
-        numbers = {'A': 1, 'J': 11, 'Q': 12, 'K': 13}
+        numbers = {"A": 1, "J": 11, "Q": 12, "K": 13}
         if rank in numbers:
             self.rank = numbers[rank]
         else:
@@ -23,10 +23,10 @@ class Card(object):
         if self.faceup:
             return "images/%d%s.png" % (self.rank, self.suit)
         else:
-            return 'images/back2.png'
+            return "images/back2.png"
 
     def color(self):
-        if self.suit == 'c' or self.suit == 's':
+        if self.suit == "c" or self.suit == "s":
             return 1
         return -1
 
@@ -43,13 +43,13 @@ class Card(object):
         return (self.rank, self.suit, True) if self.faceup else (self.rank, self.suit)
 
     @staticmethod
-    def base_image(suit=''):
+    def base_image(suit=""):
         return "images/bot%s.png" % suit
 
 
 # deck is list of decks*52 cards - object with option to persist data
 class Deck(object):
-    suits = ['c', 's', 'h', 'd']
+    suits = ["c", "s", "h", "d"]
     ace = 1
     jack = 11
     queen = 12
@@ -60,8 +60,7 @@ class Deck(object):
         self.d = []
         if config is None:
             for card in cards:
-                self.d.append(
-                    Card(card.split(' ')[0], card.split(' ')[1], True))
+                self.d.append(Card(card.split(" ")[0], card.split(" ")[1], True))
         else:
             self.load(config)
 
@@ -79,9 +78,9 @@ class Deck(object):
         return card
 
     def load(self, config):
-        cards = ast.literal_eval(config.get('game', 'deck'))
+        cards = ast.literal_eval(config.get("game", "deck"))
         self.d = [Card(*c) for c in cards]
 
     def save(self, config):
         cards = [card.export() for card in self.d]
-        config.set('game', 'deck', cards)
+        config.set("game", "deck", cards)
